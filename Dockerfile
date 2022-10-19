@@ -4,4 +4,4 @@ WORKDIR /root/app
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
-ENTRYPOINT [ "./scripts/run.sh" ]
+ENTRYPOINT [ "/root/app/scripts/run.sh" ]
