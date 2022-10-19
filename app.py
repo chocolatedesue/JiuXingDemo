@@ -143,7 +143,7 @@ def get_commits(db: Session = Depends(get_db)):
     # response_model_exclude=
     dependencies=[Depends(verify_access_token)],
     tags=["书院"])
-def get_commits_by_page(page: int = Query(gt=1, default=1), page_size: int = 10, db: Session = Depends(get_db)):
+def get_commits_by_page(page: int = Query(gt=0, default=1), page_size: int = 10, db: Session = Depends(get_db)):
     res_list = crud.get_commits_by_page(db, page, page_size)
     res_list[-1] = convert_templete(res_list[-1], convert_db_commit_to_CommitResponse)
     key = ["total", "data"]
@@ -159,7 +159,7 @@ def get_commits_by_page(page: int = Query(gt=1, default=1), page_size: int = 10,
          dependencies=[Depends(verify_access_token)],
          tags=["书院"])
 def get_commits_by_filter(arg: Union[str],
-                          page: int = Query(gt=1, default=1),
+                          page: int = Query(gt=0, default=1),
                           filter_type: str = Query(regex="学号|姓名|辅导员|大类"),
                           db: Session = Depends(get_db)):
     # try:
