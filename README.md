@@ -29,7 +29,7 @@ curl --location --request GET 'localhost:8000/api/v1/query' \
 ### lanch
 
 1. pip install -r requirements.txt
-2. bash run.sh
+2. bash scipts/run.sh
 
 ## deployment
 

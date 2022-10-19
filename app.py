@@ -34,15 +34,6 @@ else:
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-if os.getenv("MAIL_NAME"):
-    mail_name = os.getenv("MAIL_NAME")
-    mail_password = os.getenv("MAIL_PASSWORD")
-    mail_host = os.getenv("MAIL_HOST")
-    mail_port = os.getenv("MAIL_PORT")
-    receiver = os.getenv("MAIL_RECEIVER")
-    mailSender = MailSender(mail_name, mail_password, mail_host, mail_port, receiver)
-    mailSender.create_task()
-
 origins = [
     "*"
 ]
@@ -54,6 +45,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+if os.getenv("ENV"):
+    @app.post("/api/v1/addUser",
+          description="用于开发时录入用户",
+          response_model=restModel.responseModels.Message,
+          responses={
+              400: {"description": "操作失败", "model": restModel.responseModels.Message},
+              401: {"description": "用户名已存在", "model": restModel.responseModels.Message},
+              # 500: {"description": "服务 器错误", "model": restModel.responseModels.Message},
+          },
+
+          tags=["dev"]
+          )
+    def add_user(user: schemas.User, db: Session = Depends(get_db)):
+        db_user = crud.get_user_by_name(db, user.name)
+        if db_user:
+            raise HTTPException(status_code=400, detail="用户名已存在")
+        # exceptWrapper(crud.create_user, [db, user], "创建失败")
+        crud.create_user(db, user)
+        return {"detail": "创建成功"}
+
 
 
 @app.post("/api/v1/commit",
@@ -80,24 +94,7 @@ def add_commit(request: Request, commit: schemas.Commit, db: Session = Depends(g
     return convert_db_commit_to_CommitResponse(res1)
 
 
-@app.post("/api/v1/addUser",
-          description="用于开发时录入用户",
-          response_model=restModel.responseModels.Message,
-          responses={
-              400: {"description": "操作失败", "model": restModel.responseModels.Message},
-              401: {"description": "用户名已存在", "model": restModel.responseModels.Message},
-              # 500: {"description": "服务器错误", "model": restModel.responseModels.Message},
-          },
 
-          tags=["dev"]
-          )
-def add_user(user: schemas.User, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_name(db, user.name)
-    if db_user:
-        raise HTTPException(status_code=400, detail="用户名已存在")
-    # exceptWrapper(crud.create_user, [db, user], "创建失败")
-    crud.create_user(db, user)
-    return {"detail": "创建成功"}
 
 
 @app.post("/api/v1/login",
@@ -143,7 +140,7 @@ def get_commits(db: Session = Depends(get_db)):
     # response_model_exclude=
     dependencies=[Depends(verify_access_token)],
     tags=["书院"])
-def get_commits_by_page(page: int = Query(gt=1, default=1), page_size: int = 10, db: Session = Depends(get_db)):
+def get_commits_by_page(page: int = Query(gt=0, default=1), page_size: int = 10, db: Session = Depends(get_db)):
     res_list = crud.get_commits_by_page(db, page, page_size)
     res_list[-1] = convert_templete(res_list[-1], convert_db_commit_to_CommitResponse)
     key = ["total", "data"]
@@ -159,7 +156,7 @@ def get_commits_by_page(page: int = Query(gt=1, default=1), page_size: int = 10,
          dependencies=[Depends(verify_access_token)],
          tags=["书院"])
 def get_commits_by_filter(arg: Union[str],
-                          page: int = Query(gt=1, default=1),
+                          page: int = Query(gt=0, default=1),
                           filter_type: str = Query(regex="学号|姓名|辅导员|大类"),
                           db: Session = Depends(get_db)):
     # try:
