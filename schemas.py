@@ -15,7 +15,7 @@ class Commit(BaseModel):
     @validator('stu_id')
     def stu_id_must_be_11_digits(cls, v):
         if len(v) != 11:
-            raise ValueError('stu_id must be 12 digits')
+            raise ValueError('stu_id must be 11 digits')
         return v
 
     @validator('name', 'instructor')

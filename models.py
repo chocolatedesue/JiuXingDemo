@@ -23,4 +23,4 @@ class Commit(Base):
     major = Column(String)
     instructor = Column(String)
     res = Column(String)
-    detail_res = Column(String)
+    detail_res = Column(String,doc="前端传答题字符数组[1,0,1...],用于解析答题情况")
