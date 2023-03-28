@@ -21,9 +21,10 @@ from restModel.responseModels import Token, login_exception
 from util.convert import convert_templete, \
     convert_db_commit_to_CommitResponse
 from util.dbCreator import get_db
-from util.scheduleTask import MailSender
 from util.tokenManager import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
 from util.tokenManager import authenticate_user, verify_access_token
+from util.signalManager import SemaphoreManager, COMMIT_SIGNAL
+
 
 limiter = Limiter(key_func=get_remote_address)
 if os.getenv("ENV") == "dev":
@@ -33,15 +34,6 @@ else:
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-if os.getenv("MAIL_NAME"):
-    mail_name = os.getenv("MAIL_NAME")
-    mail_password = os.getenv("MAIL_PASSWORD")
-    mail_host = os.getenv("MAIL_HOST")
-    mail_port = os.getenv("MAIL_PORT")
-    receiver = os.getenv("MAIL_RECEIVER")
-    mailSender = MailSender(mail_name, mail_password, mail_host, mail_port, receiver)
-    mailSender.create_task()
 
 origins = [
     "*"
@@ -76,7 +68,18 @@ def add_commit(request: Request, commit: schemas.Commit, db: Session = Depends(g
         raise HTTPException(status_code=400, detail="学号已存在")
     if max(commit.res) == 0:
         raise HTTPException(status_code=400, detail="测试结果不能全为0")
+    
+    # 防止并发错误
+    SemaphoreManager.acquire_semaphore(
+        COMMIT_SIGNAL
+    )
+
     res1 = crud.create_commit(db, commit)
+
+    SemaphoreManager.release_semaphore(
+        COMMIT_SIGNAL
+    )
+
     return convert_db_commit_to_CommitResponse(res1)
 
 
@@ -158,7 +161,7 @@ def get_commits_by_page(page: int = Query(gt=0, default=1), page_size: int = 10,
          # response_model=restModel.responseModels.PageResponse,
          dependencies=[Depends(verify_access_token)],
          tags=["书院"])
-def get_commits_by_filter(arg: Union[str],
+def get_commits_by_filter(arg: str,
                           page: int = Query(gt=0, default=1),
                           filter_type: str = Query(regex="学号|姓名|辅导员|大类"),
                           db: Session = Depends(get_db)):
